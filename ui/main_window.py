@@ -120,6 +120,8 @@ class MainWindow(QWidget):
 
         self.list_widget = QListWidget()
         self.list_widget.itemDoubleClicked.connect(self.edit_item_from_list)
+        self.list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_widget.customContextMenuRequested.connect(self._show_list_context_menu)
 
         layout.addLayout(input_row)
         layout.addWidget(QLabel("内容"))
@@ -199,6 +201,30 @@ class MainWindow(QWidget):
         if current is None:
             return None
         return current.data(Qt.UserRole)
+
+    def _show_list_context_menu(self, pos):
+        list_item = self.list_widget.itemAt(pos)
+        if list_item is None:
+            return
+        self.list_widget.setCurrentItem(list_item)
+
+        menu = QMenu(self)
+        edit_action = menu.addAction("编辑")
+        favorite_action = menu.addAction("★ 收藏/取消收藏")
+        completed_action = menu.addAction("✓ 标记完成/取消完成")
+        menu.addSeparator()
+        delete_action = menu.addAction("删除")
+
+        action = menu.exec(self.list_widget.mapToGlobal(pos))
+
+        if action == delete_action:
+            self.delete_selected()
+        elif action == edit_action:
+            self.edit_item_from_list(list_item)
+        elif action == favorite_action:
+            self.toggle_favorite_selected()
+        elif action == completed_action:
+            self.toggle_completed_selected()
 
     # ---------- 增删改 ----------
 
