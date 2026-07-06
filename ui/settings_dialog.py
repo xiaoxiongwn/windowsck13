@@ -47,7 +47,7 @@ class SettingsDialog(QDialog):
         form.addRow("字体：", self.font_combo)
 
         self.font_size_spin = QSpinBox()
-        self.font_size_spin.setRange(10, 36)
+        self.font_size_spin.setRange(1, 36)
         self.font_size_spin.setValue(config.get("font_size", 14))
         form.addRow("字号：", self.font_size_spin)
 
