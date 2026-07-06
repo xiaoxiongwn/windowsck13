@@ -229,19 +229,25 @@ class TickerWindow(QWidget):
             star = "⭐ " if item.favorite else ""
             card_texts.append(f"{prefix}{star}{item.title}")
 
+        card_thickness = max(28, int(cross_extent * 0.6))
+        cross_pos = (cross_extent - card_thickness) // 2
+
         if is_vertical:
-            # 竖向：每条内容占一行，长度(高度)固定为字体行高+上下留白，
-            # 文字本身还是横着写的，只是一条条往上滚动
-            card_primary_sizes = [metrics.height() + CARD_PADDING_Y * 2 for _ in card_texts]
+            # 竖向：文字要在卡片宽度内自动换行，卡片高度按换行后实际需要的行数来定，
+            # 标题长的自然就占更多行，不会被裁掉。
+            wrap_width = max(10, card_thickness - CARD_PADDING_X * 2)
+            card_primary_sizes = []
+            for text in card_texts:
+                bounding = metrics.boundingRect(
+                    QRect(0, 0, wrap_width, 10_000), Qt.TextWordWrap | Qt.AlignCenter, text
+                )
+                card_primary_sizes.append(bounding.height() + CARD_PADDING_Y * 2)
         else:
             # 横向：每条内容的长度(宽度)按文字长短决定
             card_primary_sizes = [
                 metrics.horizontalAdvance(text) + CARD_PADDING_X * 2
                 for text in card_texts
             ]
-
-        card_thickness = max(28, int(cross_extent * 0.6))
-        cross_pos = (cross_extent - card_thickness) // 2
 
         def draw_card(pos_along, size_along, index):
             if is_vertical:
@@ -263,7 +269,10 @@ class TickerWindow(QWidget):
             painter.fillPath(card_path, card_color)
 
             painter.setPen(QColor(255, 255, 255))
-            painter.drawText(card_rect, Qt.AlignCenter, card_texts[index])
+            text_flags = Qt.AlignCenter
+            if is_vertical:
+                text_flags |= Qt.TextWordWrap
+            painter.drawText(card_rect, text_flags, card_texts[index])
 
             self._card_rects.append((QRect(card_rect), item))
 
