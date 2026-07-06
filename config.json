@@ -1,0 +1,29 @@
+{
+  "window_width": 900,
+  "window_height": 600,
+  "font_family": "Microsoft YaHei",
+  "font_size": 14,
+  "card_color": "#4682DC",
+  "priority_colors": {
+    "1": "#4A90D9",
+    "2": "#3FB88F",
+    "3": "#E8A33D",
+    "4": "#E0703D",
+    "5": "#D9434E"
+  },
+  "opacity": 85,
+  "scroll_speed": 2,
+  "always_on_top": true,
+  "pause_on_hover": true,
+  "ticker_x": null,
+  "ticker_y": null,
+  "ticker_width": null,
+  "ticker_height": null,
+  "categories": [
+    "未分类",
+    "工作",
+    "学习",
+    "股票",
+    "服务器"
+  ]
+}
