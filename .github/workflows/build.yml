@@ -1,0 +1,45 @@
+name: Build EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Locate project folder
+        id: locate
+        shell: bash
+        run: |
+          MAIN_PATH=$(find . -maxdepth 3 -name "main.py" | head -n 1)
+          if [ -z "$MAIN_PATH" ]; then
+            echo "main.py not found in repo! Check your folder structure." >&2
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$MAIN_PATH")
+          echo "Found main.py at: $MAIN_PATH"
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        working-directory: ${{ steps.locate.outputs.project_dir }}
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build exe
+        working-directory: ${{ steps.locate.outputs.project_dir }}
+        run: pyinstaller --onefile --noconsole --name DeskTicker main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeskTicker-windows-exe
+          path: ${{ steps.locate.outputs.project_dir }}/dist/DeskTicker.exe
