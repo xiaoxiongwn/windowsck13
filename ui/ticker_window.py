@@ -234,6 +234,27 @@ class TickerWindow(QWidget):
 
     # ---------- 绘制 ----------
 
+    @staticmethod
+    def _wrap_by_char(text, wrap_width, metrics):
+        """
+        按字符手动分行（不依赖 Qt 自带的"按单词换行"）。
+        中文没有空格，Qt 的单词换行对中文不准，容易导致
+        "预先算的行数"和"实际画出来的行数"对不上。
+        这里自己一个字一个字地判断宽度，保证两边完全一致。
+        """
+        lines = []
+        current = ""
+        for ch in text:
+            candidate = current + ch
+            if not current or metrics.horizontalAdvance(candidate) <= wrap_width:
+                current = candidate
+            else:
+                lines.append(current)
+                current = ch
+        if current:
+            lines.append(current)
+        return lines or [""]
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -287,16 +308,18 @@ class TickerWindow(QWidget):
         cross_pos = (cross_extent - card_thickness) // 2
 
         if is_vertical:
-            # 竖向：文字要在卡片宽度内自动换行，卡片高度按换行后实际需要的行数来定，
-            # 标题长的自然就占更多行，不会被裁掉。
+            # 竖向：文字要在卡片宽度内自动换行。
+            # 这里不用 Qt 自带的"按单词换行"（对中文不准，容易和实际绘制的行数对不上，
+            # 导致卡片背景比文字矮一截，文字溢出到背景框外面）。
+            # 改成自己按字符手动分行，预先算好的行数和实际画出来的行数保证完全一致。
             wrap_width = max(10, card_thickness - CARD_PADDING_X * 2)
-            card_primary_sizes = []
-            for text in card_texts:
-                bounding = metrics.boundingRect(
-                    QRect(0, 0, wrap_width, 10_000), Qt.TextWordWrap | Qt.AlignCenter, text
-                )
-                card_primary_sizes.append(bounding.height() + CARD_PADDING_Y * 2)
+            line_height = metrics.height()
+            card_lines = [self._wrap_by_char(text, wrap_width, metrics) for text in card_texts]
+            card_primary_sizes = [
+                line_height * len(lines) + CARD_PADDING_Y * 2 for lines in card_lines
+            ]
         else:
+            card_lines = None
             # 横向：每条内容的长度(宽度)按文字长短决定
             card_primary_sizes = [
                 metrics.horizontalAdvance(text) + CARD_PADDING_X * 2
@@ -323,10 +346,12 @@ class TickerWindow(QWidget):
             painter.fillPath(card_path, card_color)
 
             painter.setPen(QColor(255, 255, 255))
-            text_flags = Qt.AlignCenter
             if is_vertical:
-                text_flags |= Qt.TextWordWrap
-            painter.drawText(card_rect, text_flags, card_texts[index])
+                # 用自己算好的分行结果拼接，Qt的AlignCenter本身就支持给多行文字居中显示
+                display_text = "\n".join(card_lines[index])
+            else:
+                display_text = card_texts[index]
+            painter.drawText(card_rect, Qt.AlignCenter, display_text)
 
             self._card_rects.append((QRect(card_rect), item))
 
