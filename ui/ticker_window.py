@@ -88,10 +88,32 @@ class TickerWindow(QWidget):
 
         self.resize(max(w, MIN_WIDTH), max(h, MIN_HEIGHT))
 
-        if x is not None and y is not None:
+        if x is not None and y is not None and self._is_position_visible(x, y):
             self.move(x, y)
         else:
+            # 记住的位置不在当前屏幕范围内（比如把 config.json 拷到了
+            # 分辨率、多屏摆放不一样的另一台电脑上），就不要用这个可能
+            # 根本看不见的旧坐标，改用默认位置，保证悬浮条至少看得见。
             self._move_to_default_position()
+
+    def _is_position_visible(self, x, y):
+        """粗略判断这个坐标是否落在某块屏幕的可见范围内。"""
+        try:
+            screens = QApplication.screens()
+        except Exception:
+            return True  # 拿不到屏幕信息时，不要因为这个判断反而报错，保守放行
+
+        if not screens:
+            return True
+
+        # 只要窗口的左上角落在任意一块屏幕范围内（留一点余量），就认为可见
+        margin = 50
+        for screen in screens:
+            geo = screen.availableGeometry()
+            if (geo.x() - margin) <= x <= (geo.x() + geo.width() + margin) and \
+               (geo.y() - margin) <= y <= (geo.y() + geo.height() + margin):
+                return True
+        return False
 
     def _default_size_for_orientation(self):
         if self._orientation == "vertical":
@@ -114,9 +136,17 @@ class TickerWindow(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
 
     def _move_to_default_position(self):
-        screen = QApplication.primaryScreen().availableGeometry()
+        primary_screen = QApplication.primaryScreen()
+        if primary_screen is not None:
+            screen = primary_screen.availableGeometry()
+        else:
+            # 极少数情况下（多屏/远程桌面/投影等特殊显示配置）
+            # primaryScreen() 可能拿不到，这时候退回一个保底的默认区域，
+            # 不至于直接报错导致悬浮条打不开。
+            screen = QRect(0, 0, 1920, 1080)
+
         if self._orientation == "vertical":
-            x = screen.x() + screen.width() - self.width() - 40
+            x = screen.x() + screen.width() - self.width() - 150
             y = screen.y() + (screen.height() - self.height()) // 2
         else:
             x = screen.x() + (screen.width() - self.width()) // 2
