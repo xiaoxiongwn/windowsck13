@@ -1,4 +1,5 @@
 import json
+import traceback
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
@@ -301,11 +302,23 @@ class MainWindow(QWidget):
     # ---------- 悬浮条 / 设置 ----------
 
     def open_ticker(self):
-        if self.ticker_window is None:
-            self.ticker_window = TickerWindow(config=self.config)
-        self.ticker_window.refresh_data()
-        self.ticker_window.show()
-        self.ticker_window.raise_()
+        try:
+            if self.ticker_window is None:
+                self.ticker_window = TickerWindow(config=self.config)
+            self.ticker_window.refresh_data()
+            self.ticker_window.show()
+            self.ticker_window.raise_()
+        except Exception:
+            # 打包成 exe (--noconsole) 之后，出错默认是"悄无声息地失败"，
+            # 什么都看不到。这里主动弹窗把具体错误显示出来，
+            # 方便截图反馈，能一眼定位到底是哪一行代码出的问题。
+            error_detail = traceback.format_exc()
+            self.ticker_window = None
+            QMessageBox.critical(
+                self,
+                "打开悬浮条失败",
+                "悬浮条打开时出现错误，请把下面的详细信息截图反馈：\n\n" + error_detail,
+            )
 
     def open_settings(self):
         dialog = SettingsDialog(self.config, on_apply=self._sync_ticker, parent=self)
