@@ -179,7 +179,9 @@ class TickerWindow(QWidget):
             # 方向变了：把宽高对调一下，横向的"矮长条"变成竖向的"瘦高条"（反之亦然），
             # 这样切换方向后形状会更合理，不用你自己手动重新拖一遍。
             self._orientation = new_orientation
-            self.resize(self.height(), self.width())
+            new_w = max(self.height(), MIN_WIDTH)
+            new_h = max(self.width(), MIN_HEIGHT)
+            self.resize(new_w, new_h)
             self._move_to_default_position()
             self._save_geometry()
             self.offset = 0.0
@@ -402,22 +404,21 @@ class TickerWindow(QWidget):
         geo = QRect(self._resize_start_geo)
         edge = self._resize_edge
 
+        # 这里统一用"限制到最小值"而不是"没达到最小值就完全不生效"，
+        # 这样不管当前起始尺寸多小（比如方向切换后转置出来的窄边），
+        # 拖动的时候都是连续跟手的，不会出现"要拖出一大段距离才突然生效"的跳变。
         if "left" in edge:
-            new_left = geo.left() + delta.x()
-            if geo.right() - new_left + 1 >= MIN_WIDTH:
-                geo.setLeft(new_left)
+            new_width = max(MIN_WIDTH, geo.width() - delta.x())
+            geo.setLeft(geo.right() - new_width + 1)
         if "right" in edge:
-            new_width = geo.width() + delta.x()
-            if new_width >= MIN_WIDTH:
-                geo.setWidth(new_width)
+            new_width = max(MIN_WIDTH, geo.width() + delta.x())
+            geo.setWidth(new_width)
         if "top" in edge:
-            new_top = geo.top() + delta.y()
-            if geo.bottom() - new_top + 1 >= MIN_HEIGHT:
-                geo.setTop(new_top)
+            new_height = max(MIN_HEIGHT, geo.height() - delta.y())
+            geo.setTop(geo.bottom() - new_height + 1)
         if "bottom" in edge:
-            new_height = geo.height() + delta.y()
-            if new_height >= MIN_HEIGHT:
-                geo.setHeight(new_height)
+            new_height = max(MIN_HEIGHT, geo.height() + delta.y())
+            geo.setHeight(new_height)
 
         self.setGeometry(geo)
 
