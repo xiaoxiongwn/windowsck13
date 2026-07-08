@@ -67,6 +67,7 @@ class TickerWindow(QWidget):
         # 每次绘制时记录每张卡片当前的屏幕位置，用来判断双击点到了哪一张
         self._card_rects = []  # list of (QRect, item)
         self._sequence = []  # 按优先级加权、跳过已完成后的滚动播放序列
+        self._category_filter = "全部"  # 和主窗口的分类筛选下拉框同步
 
         # 明确告诉 Windows："这个窗口允许比系统默认最小值更小"，
         # 否则 Windows 会套用自己的系统级最小窗口宽度(通常130~160像素左右)，
@@ -181,13 +182,27 @@ class TickerWindow(QWidget):
         self.manager.load()
         self._rebuild_sequence()
 
+    def set_category_filter(self, category):
+        """
+        和主窗口的分类筛选下拉框同步：选了某个分类，
+        悬浮条也只滚动这个分类下的内容；选"全部"就恢复显示全部。
+        """
+        self._category_filter = category or "全部"
+        self._rebuild_sequence()
+
     def _rebuild_sequence(self):
         """
         滚动播放顺序：每条只出现一次（不再按优先级重复），
-        已完成的条目直接跳过，不出现在悬浮条里。
+        已完成的条目直接跳过，不出现在悬浮条里，
+        并且只保留当前筛选分类下的内容（"全部"则不筛选）。
         重要性改用卡片颜色区分，见 paintEvent。
         """
-        self._sequence = [i for i in self.manager.items if not i.completed]
+        category_filter = self._category_filter
+        self._sequence = [
+            i for i in self.manager.items
+            if not i.completed
+            and (category_filter == "全部" or i.category == category_filter)
+        ]
         self.offset = 0.0
 
     def apply_settings(self):
