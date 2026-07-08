@@ -197,6 +197,8 @@ class MainWindow(QWidget):
                 list_item.setFont(font)
             self.list_widget.addItem(list_item)
 
+        self._sync_ticker_category(category)
+
     def _current_item_id(self):
         current = self.list_widget.currentItem()
         if current is None:
@@ -306,6 +308,7 @@ class MainWindow(QWidget):
             if self.ticker_window is None:
                 self.ticker_window = TickerWindow(config=self.config)
             self.ticker_window.refresh_data()
+            self.ticker_window.set_category_filter(self.category_filter.currentText())
             self.ticker_window.show()
             self.ticker_window.raise_()
         except Exception:
@@ -337,6 +340,11 @@ class MainWindow(QWidget):
         if self.ticker_window is not None:
             self.ticker_window.refresh_data()
             self.ticker_window.apply_settings()
+
+    def _sync_ticker_category(self, category=None):
+        if self.ticker_window is not None:
+            cat = category if category is not None else self.category_filter.currentText()
+            self.ticker_window.set_category_filter(cat)
 
     # ---------- 系统托盘 ----------
 
