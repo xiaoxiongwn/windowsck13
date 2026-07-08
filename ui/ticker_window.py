@@ -13,11 +13,15 @@ CARD_PADDING_X = 16
 CARD_PADDING_Y = 10
 BAR_HEIGHT = 60
 DEFAULT_WIDTH = 560
-VERTICAL_DEFAULT_WIDTH = 44
+VERTICAL_DEFAULT_WIDTH = 260
 VERTICAL_DEFAULT_HEIGHT = 480
 RESIZE_MARGIN = 8
 MIN_WIDTH = 240
 MIN_HEIGHT = 44
+# 滚动方向(内容前进的方向)需要留够长度才好看；
+# 垂直方向(悬浮条的"厚度")可以窄很多，横向是高度、竖向是宽度。
+MIN_SCROLL_LENGTH = 240
+MIN_THICKNESS = 60
 
 # 星级 -> 卡片颜色，数字越大越重要，颜色也更醒目/更"警示"
 DEFAULT_PRIORITY_COLORS = {
@@ -64,6 +68,11 @@ class TickerWindow(QWidget):
         self._card_rects = []  # list of (QRect, item)
         self._sequence = []  # 按优先级加权、跳过已完成后的滚动播放序列
 
+        # 明确告诉 Windows："这个窗口允许比系统默认最小值更小"，
+        # 否则 Windows 会套用自己的系统级最小窗口宽度(通常130~160像素左右)，
+        # 导致不管我们代码里怎么设置，往窄拖到一定程度就会被系统卡住拖不动。
+        self.setMinimumSize(10, 10)
+
         self._restore_geometry()
         self._apply_window_flags()
 
@@ -86,7 +95,8 @@ class TickerWindow(QWidget):
         w = self.config.get("ticker_width") or default_w
         h = self.config.get("ticker_height") or default_h
 
-        self.resize(max(w, MIN_WIDTH), max(h, MIN_HEIGHT))
+        min_w, min_h = self._min_size_for_orientation()
+        self.resize(max(w, min_w), max(h, min_h))
 
         if x is not None and y is not None and self._is_position_visible(x, y):
             self.move(x, y)
@@ -119,6 +129,17 @@ class TickerWindow(QWidget):
         if self._orientation == "vertical":
             return VERTICAL_DEFAULT_WIDTH, VERTICAL_DEFAULT_HEIGHT
         return DEFAULT_WIDTH, BAR_HEIGHT
+
+    def _min_size_for_orientation(self):
+        """
+        返回 (最小宽度, 最小高度)，按当前方向区分：
+        滚动方向(内容前进方向)需要留够长度，垂直方向(悬浮条厚度)可以窄很多。
+        横向：宽度是滚动方向，高度是厚度。
+        竖向：高度是滚动方向，宽度是厚度。
+        """
+        if self._orientation == "vertical":
+            return MIN_THICKNESS, MIN_SCROLL_LENGTH
+        return MIN_SCROLL_LENGTH, MIN_THICKNESS
 
     def _save_geometry(self):
         self.config.update(
@@ -179,8 +200,9 @@ class TickerWindow(QWidget):
             # 方向变了：把宽高对调一下，横向的"矮长条"变成竖向的"瘦高条"（反之亦然），
             # 这样切换方向后形状会更合理，不用你自己手动重新拖一遍。
             self._orientation = new_orientation
-            new_w = max(self.height(), MIN_WIDTH)
-            new_h = max(self.width(), MIN_HEIGHT)
+            min_w, min_h = self._min_size_for_orientation()
+            new_w = max(self.height(), min_w)
+            new_h = max(self.width(), min_h)
             self.resize(new_w, new_h)
             self._move_to_default_position()
             self._save_geometry()
@@ -403,21 +425,22 @@ class TickerWindow(QWidget):
         delta = global_pos - self._resize_start_mouse
         geo = QRect(self._resize_start_geo)
         edge = self._resize_edge
+        min_w, min_h = self._min_size_for_orientation()
 
         # 这里统一用"限制到最小值"而不是"没达到最小值就完全不生效"，
         # 这样不管当前起始尺寸多小（比如方向切换后转置出来的窄边），
         # 拖动的时候都是连续跟手的，不会出现"要拖出一大段距离才突然生效"的跳变。
         if "left" in edge:
-            new_width = max(MIN_WIDTH, geo.width() - delta.x())
+            new_width = max(min_w, geo.width() - delta.x())
             geo.setLeft(geo.right() - new_width + 1)
         if "right" in edge:
-            new_width = max(MIN_WIDTH, geo.width() + delta.x())
+            new_width = max(min_w, geo.width() + delta.x())
             geo.setWidth(new_width)
         if "top" in edge:
-            new_height = max(MIN_HEIGHT, geo.height() - delta.y())
+            new_height = max(min_h, geo.height() - delta.y())
             geo.setTop(geo.bottom() - new_height + 1)
         if "bottom" in edge:
-            new_height = max(MIN_HEIGHT, geo.height() + delta.y())
+            new_height = max(min_h, geo.height() + delta.y())
             geo.setHeight(new_height)
 
         self.setGeometry(geo)
