@@ -204,6 +204,10 @@ class TickerWindow(QWidget):
             and (category_filter == "全部" or i.category == category_filter)
         ]
         self.offset = 0.0
+        # 定时器只在"还有内容可滚动"时才会触发重画（见 _on_tick），
+        # 如果内容变成了空的，定时器那边会直接跳过，导致屏幕上还留着上一次的旧画面，
+        # 要点一下悬浮条才会重画。这里主动强制刷新一次，保证内容一变就立刻反映出来。
+        self.update()
 
     def apply_settings(self):
         """设置窗口保存后调用，让悬浮条立即应用新的外观/行为设置。"""
