@@ -309,7 +309,12 @@ class TickerWindow(QWidget):
 
         if not items:
             painter.setPen(QColor(255, 255, 255, 200))
-            painter.drawText(self.rect(), Qt.AlignCenter, "暂无内容，先在主窗口里新增一条吧")
+            metrics = QFontMetrics(painter.font())
+            empty_wrap_width = max(20, self.width() - CARD_PADDING_X * 2)
+            empty_lines = self._wrap_by_char(
+                "暂无内容，先在主窗口里新增一条吧", empty_wrap_width, metrics
+            )
+            painter.drawText(self.rect(), Qt.AlignCenter, "\n".join(empty_lines))
             painter.end()
             return
 
