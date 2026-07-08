@@ -17,7 +17,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.edit_dialog import EditDialog
 from ui.category_dialog import CategoryDialog
 from utils.config import AppConfig
-from utils.app_info import APP_NAME
+from utils.app_info import APP_NAME, APP_TITLE_COLOR, APP_TITLE_FONT_SIZE
 
 DEFAULT_CATEGORIES = ["未分类", "工作", "学习", "股票", "服务器"]
 
@@ -38,6 +38,14 @@ class MainWindow(QWidget):
         self.ticker_window = None
 
         layout = QVBoxLayout()
+
+        # 窗口内容最上方的软件名称，颜色和字号在 utils/app_info.py 里改
+        self.title_label = QLabel(APP_NAME)
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.title_label.setStyleSheet(
+            f"color: {APP_TITLE_COLOR}; font-size: {APP_TITLE_FONT_SIZE}px; font-weight: bold;"
+        )
+        layout.addWidget(self.title_label)
 
         # ---- 新增区域 ----
         input_row = QHBoxLayout()
